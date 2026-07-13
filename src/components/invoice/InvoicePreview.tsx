@@ -12,22 +12,13 @@ import type { Invoice, ShopSettings } from '@/types';
 interface InvoicePreviewProps {
   invoice: Invoice;
   shopSettings: ShopSettings;
+  standalone?: boolean;
 }
 
-export default function InvoicePreview({ invoice, shopSettings }: InvoicePreviewProps) {
-  return (
-    <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
-      <div className="px-5 py-4 border-b border-white/[0.06]">
-        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-          <Eye size={16} className="text-indigo-400" />
-          Live Preview
-        </h3>
-      </div>
-
-      {/* Preview — styled like a paper invoice */}
-      <div className="p-4">
-        <div className="bg-white rounded-xl p-6 text-gray-900 shadow-2xl shadow-black/40 max-h-[600px] overflow-y-auto">
-          {/* Shop Header */}
+export default function InvoicePreview({ invoice, shopSettings, standalone = false }: InvoicePreviewProps) {
+  const content = (
+    <>
+      {/* Shop Header */}
           <div className="flex items-start justify-between mb-4 pb-4 border-b-2 border-indigo-500">
             <div className="flex items-center gap-3">
               {shopSettings.logo && (
@@ -130,6 +121,28 @@ export default function InvoicePreview({ invoice, shopSettings }: InvoicePreview
           <p className="text-[9px] text-gray-400 text-center mt-3">
             Thank you for your purchase!
           </p>
+    </>
+  );
+
+  if (standalone) {
+    return (
+      <div className="bg-white rounded-xl p-6 sm:p-8 text-gray-900 shadow-sm border border-gray-100">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
+      <div className="px-5 py-4 border-b border-white/[0.06]">
+        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+          <Eye size={16} className="text-indigo-400" />
+          Live Preview
+        </h3>
+      </div>
+      <div className="p-4">
+        <div className="bg-white rounded-xl p-6 text-gray-900 shadow-2xl shadow-black/40 max-h-[600px] overflow-y-auto">
+          {content}
         </div>
       </div>
     </div>

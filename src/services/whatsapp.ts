@@ -13,13 +13,13 @@ function formatInvoiceMessage(invoice: Invoice, shopSettings: ShopSettings): str
   const items = invoice.items
     .map(
       (item, idx) =>
-        `${idx + 1}. ${item.name} (${item.size}, ${item.color}) × ${item.quantity} — ₹${item.amount.toFixed(2)}`
+        `${idx + 1}. ${item.name} (${item.size}, ${item.color}) x ${item.quantity} - Rs.${item.amount.toFixed(2)}`
     )
     .join('\n');
 
   const message = `
-🧾 *INVOICE — ${shopSettings.name || 'Fashion Store'}*
-━━━━━━━━━━━━━━━━━━━━
+🧾 *INVOICE - ${shopSettings.name || 'Fashion Store'}*
+--------------------
 Invoice #: ${invoice.invoiceNumber}
 Date: ${new Date(invoice.date).toLocaleDateString('en-IN', {
     year: 'numeric',
@@ -33,11 +33,11 @@ Date: ${new Date(invoice.date).toLocaleDateString('en-IN', {
 📦 *Items:*
 ${items}
 
-━━━━━━━━━━━━━━━━━━━━
-Subtotal: ₹${invoice.subtotal.toFixed(2)}
-${invoice.totalDiscount > 0 ? `Discount: -₹${invoice.totalDiscount.toFixed(2)}\n` : ''}GST (${invoice.taxRate}%): ₹${invoice.taxAmount.toFixed(2)}
-*💰 Grand Total: ₹${invoice.grandTotal.toFixed(2)}*
-━━━━━━━━━━━━━━━━━━━━
+--------------------
+Subtotal: Rs.${invoice.subtotal.toFixed(2)}
+${invoice.totalDiscount > 0 ? `Discount: -Rs.${invoice.totalDiscount.toFixed(2)}\n` : ''}GST (${invoice.taxRate}%): Rs.${invoice.taxAmount.toFixed(2)}
+*💰 Grand Total: Rs.${invoice.grandTotal.toFixed(2)}*
+--------------------
 
 Thank you for shopping with us! 🛍️
 ${shopSettings.phone ? `📞 ${shopSettings.phone}` : ''}
@@ -54,31 +54,17 @@ ${shopSettings.address ? `📍 ${shopSettings.address}` : ''}
 export async function shareViaWhatsApp(invoice: Invoice, shopSettings: ShopSettings): Promise<void> {
   const message = formatInvoiceMessage(invoice, shopSettings);
 
-  try {
-    // Attempt to use Web Share API with the PDF file (works on modern mobile browsers & some desktop)
-    if (navigator.share && navigator.canShare) {
-      const pdfBlob = await getInvoicePDFBlob(invoice, shopSettings);
-      const file = new File([pdfBlob], `${invoice.invoiceNumber}.pdf`, {
-        type: 'application/pdf',
-      });
-      
-      const shareData = {
-        title: `Invoice ${invoice.invoiceNumber}`,
-        text: message,
-        files: [file],
-      };
-      
-      if (navigator.canShare(shareData)) {
-        await navigator.share(shareData);
-        return; // Successfully shared via native dialog
-      }
-    }
-  } catch (error) {
-    console.warn('Web Share API failed or was cancelled, falling back to wa.me link.', error);
-  }
+  // Create a digital bill link by encoding the invoice data (without the large logo image)
+  const { logo, ...shopDetails } = shopSettings;
+  const payload = { i: invoice, s: shopDetails };
+  const encodedData = btoa(encodeURIComponent(JSON.stringify(payload)));
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const billUrl = `${baseUrl}/bill?d=${encodedData}`;
 
-  // Fallback to text-only wa.me link if Web Share is unsupported or fails
-  const encodedMessage = encodeURIComponent(message);
+  const finalMessage = `${message}\n\n🌐 *View & Download Digital Bill:*\n${billUrl}`;
+
+  // Use wa.me link to ensure the phone number is targeted
+  const encodedMessage = encodeURIComponent(finalMessage);
   let phone = '';
   if (invoice.customer.phone) {
     phone = invoice.customer.phone.replace(/\D/g, '');
