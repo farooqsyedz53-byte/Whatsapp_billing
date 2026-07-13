@@ -6,13 +6,12 @@
 import type { Invoice, ShopSettings } from '@/types';
 
 /**
- * Generate a professional invoice PDF.
- * Returns the jsPDF document instance for download or print.
+ * Common internal function to build the jsPDF document.
  */
-export async function generateInvoicePDF(
+async function buildInvoicePDFDoc(
   invoice: Invoice,
   shopSettings: ShopSettings
-): Promise<void> {
+) {
   // Dynamic imports to avoid SSR issues in Next.js
   const { default: jsPDF } = await import('jspdf');
   const { default: autoTable } = await import('jspdf-autotable');
@@ -210,6 +209,17 @@ export async function generateInvoicePDF(
     { align: 'center' }
   );
 
+  return doc;
+}
+
+/**
+ * Generate a professional invoice PDF and download it.
+ */
+export async function generateInvoicePDF(
+  invoice: Invoice,
+  shopSettings: ShopSettings
+): Promise<void> {
+  const doc = await buildInvoicePDFDoc(invoice, shopSettings);
   doc.save(`${invoice.invoiceNumber}.pdf`);
 }
 
@@ -220,108 +230,18 @@ export async function printInvoicePDF(
   invoice: Invoice,
   shopSettings: ShopSettings
 ): Promise<void> {
-  const { default: jsPDF } = await import('jspdf');
-  const { default: autoTable } = await import('jspdf-autotable');
-
-  // Reuse the same generation logic but open print dialog
-  const doc = new jsPDF('p', 'mm', 'a4');
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 15;
-  let y = margin;
-
-  // Simplified version — same header structure
-  if (shopSettings.logo) {
-    try { doc.addImage(shopSettings.logo, 'PNG', margin, y, 25, 25); } catch { /* skip */ }
-  }
-
-  const headerX = shopSettings.logo ? margin + 30 : margin;
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text(shopSettings.name || 'Fashion Store', headerX, y + 8);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100, 100, 100);
-  if (shopSettings.address) doc.text(shopSettings.address, headerX, y + 14);
-  if (shopSettings.phone) doc.text(`Phone: ${shopSettings.phone}`, headerX, y + 19);
-  if (shopSettings.gstNumber) doc.text(`GST: ${shopSettings.gstNumber}`, headerX, y + 24);
-  y += 35;
-
-  doc.setDrawColor(99, 102, 241);
-  doc.setLineWidth(0.8);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 8;
-
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(99, 102, 241);
-  doc.text('TAX INVOICE', pageWidth - margin, y, { align: 'right' });
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(60, 60, 60);
-  doc.text(`Invoice #: ${invoice.invoiceNumber}`, margin, y);
-  y += 6;
-  doc.text(`Date: ${new Date(invoice.date).toLocaleDateString('en-IN')}`, margin, y);
-  y += 10;
-
-  doc.setFillColor(245, 247, 255);
-  doc.roundedRect(margin, y, pageWidth - 2 * margin, 18, 2, 2, 'F');
-  y += 6;
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(30, 30, 30);
-  doc.text('Bill To:', margin + 4, y);
-  doc.setFont('helvetica', 'normal');
-  doc.text(invoice.customer.name || 'Walk-in Customer', margin + 22, y);
-  y += 6;
-  if (invoice.customer.phone) doc.text(`Phone: ${invoice.customer.phone}`, margin + 22, y);
-  y += 12;
-
-  autoTable(doc, {
-    startY: y,
-    columns: [
-      { header: '#', dataKey: 'index' },
-      { header: 'Item', dataKey: 'name' },
-      { header: 'Size', dataKey: 'size' },
-      { header: 'Color', dataKey: 'color' },
-      { header: 'Qty', dataKey: 'quantity' },
-      { header: 'Price (₹)', dataKey: 'price' },
-      { header: 'Disc %', dataKey: 'discount' },
-      { header: 'Amount (₹)', dataKey: 'amount' },
-    ],
-    body: invoice.items.map((item, idx) => ({
-      index: idx + 1, name: item.name, size: item.size, color: item.color,
-      quantity: item.quantity, price: item.price.toFixed(2),
-      discount: `${item.discount}%`, amount: item.amount.toFixed(2),
-    })),
-    margin: { left: margin, right: margin },
-    headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
-    bodyStyles: { fontSize: 9 },
-    alternateRowStyles: { fillColor: [248, 250, 255] },
-  });
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  y = (doc as any).lastAutoTable.finalY + 10;
-  const totalsX = pageWidth - margin - 80;
-  const totalsValueX = pageWidth - margin;
-
-  doc.setFontSize(10);
-  doc.text('Subtotal:', totalsX, y);
-  doc.text(`₹${invoice.subtotal.toFixed(2)}`, totalsValueX, y, { align: 'right' });
-  y += 6;
-  if (invoice.totalDiscount > 0) {
-    doc.text('Discount:', totalsX, y);
-    doc.text(`-₹${invoice.totalDiscount.toFixed(2)}`, totalsValueX, y, { align: 'right' });
-    y += 6;
-  }
-  doc.text(`GST (${invoice.taxRate}%):`, totalsX, y);
-  doc.text(`₹${invoice.taxAmount.toFixed(2)}`, totalsValueX, y, { align: 'right' });
-  y += 8;
-  doc.setFontSize(13);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(99, 102, 241);
-  doc.text('Grand Total:', totalsX, y + 4);
-  doc.text(`₹${invoice.grandTotal.toFixed(2)}`, totalsValueX, y + 4, { align: 'right' });
-
-  // Open print dialog
+  const doc = await buildInvoicePDFDoc(invoice, shopSettings);
   doc.autoPrint();
   window.open(doc.output('bloburl'), '_blank');
+}
+
+/**
+ * Generate PDF and return as Blob (useful for Web Share API).
+ */
+export async function getInvoicePDFBlob(
+  invoice: Invoice,
+  shopSettings: ShopSettings
+): Promise<Blob> {
+  const doc = await buildInvoicePDFDoc(invoice, shopSettings);
+  return doc.output('blob');
 }

@@ -4,6 +4,7 @@
  */
 
 import type { Invoice, ShopSettings } from '@/types';
+import { getInvoicePDFBlob } from './pdf';
 
 /**
  * Generate a WhatsApp-ready invoice summary message.
@@ -50,14 +51,36 @@ ${shopSettings.address ? `📍 ${shopSettings.address}` : ''}
  * Share invoice via WhatsApp.
  * Opens WhatsApp with the customer's number (if available) and pre-filled message.
  */
-export function shareViaWhatsApp(invoice: Invoice, shopSettings: ShopSettings): void {
+export async function shareViaWhatsApp(invoice: Invoice, shopSettings: ShopSettings): Promise<void> {
   const message = formatInvoiceMessage(invoice, shopSettings);
-  const encodedMessage = encodeURIComponent(message);
 
-  // If customer phone is available, pre-fill the number
+  try {
+    // Attempt to use Web Share API with the PDF file (works on modern mobile browsers & some desktop)
+    if (navigator.share && navigator.canShare) {
+      const pdfBlob = await getInvoicePDFBlob(invoice, shopSettings);
+      const file = new File([pdfBlob], `${invoice.invoiceNumber}.pdf`, {
+        type: 'application/pdf',
+      });
+      
+      const shareData = {
+        title: `Invoice ${invoice.invoiceNumber}`,
+        text: message,
+        files: [file],
+      };
+      
+      if (navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        return; // Successfully shared via native dialog
+      }
+    }
+  } catch (error) {
+    console.warn('Web Share API failed or was cancelled, falling back to wa.me link.', error);
+  }
+
+  // Fallback to text-only wa.me link if Web Share is unsupported or fails
+  const encodedMessage = encodeURIComponent(message);
   let phone = '';
   if (invoice.customer.phone) {
-    // Remove non-numeric characters and ensure country code
     phone = invoice.customer.phone.replace(/\D/g, '');
     if (phone.length === 10) {
       phone = '91' + phone; // Default to India country code
