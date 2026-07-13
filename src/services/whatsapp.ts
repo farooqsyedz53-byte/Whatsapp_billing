@@ -4,7 +4,7 @@
  */
 
 import type { Invoice, ShopSettings } from '@/types';
-import { generateInvoiceHTML } from './html';
+import { getInvoicePDFBlob } from './pdf';
 
 /**
  * Generate a WhatsApp-ready invoice summary message.
@@ -52,23 +52,29 @@ ${shopSettings.address ? `📍 ${shopSettings.address}` : ''}
  * Opens WhatsApp with the customer's number (if available) and pre-filled message.
  */
 export async function shareViaWhatsApp(invoice: Invoice, shopSettings: ShopSettings): Promise<void> {
-  // 1. Generate and download the standalone HTML file automatically
-  const htmlContent = generateInvoiceHTML(invoice, shopSettings);
-  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Invoice_${invoice.invoiceNumber}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-
-  // 2. Open WhatsApp with pre-filled text and phone number
   const message = formatInvoiceMessage(invoice, shopSettings);
-  const finalMessage = `${message}\n\n*(Please attach the downloaded HTML invoice file manually)*`;
 
+  // Create a digital bill link by encoding the invoice data (without the large logo image)
+  const { logo, ...shopDetails } = shopSettings;
+  const payload = { i: invoice, s: shopDetails };
+  const encodedData = btoa(encodeURIComponent(JSON.stringify(payload)));
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const longBillUrl = `${baseUrl}/bill?d=${encodedData}`;
+
+  // Use TinyURL free API to shorten the long link
+  let finalBillUrl = longBillUrl;
+  try {
+    const response = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longBillUrl)}`);
+    if (response.ok) {
+      finalBillUrl = await response.text();
+    }
+  } catch (error) {
+    console.warn('Failed to shorten URL with TinyURL, using long URL', error);
+  }
+
+  const finalMessage = `${message}\n\n🌐 *View & Download Digital Bill:*\n${finalBillUrl}`;
+
+  // Use wa.me link to ensure the phone number is targeted
   const encodedMessage = encodeURIComponent(finalMessage);
   let phone = '';
   if (invoice.customer.phone) {
@@ -78,9 +84,9 @@ export async function shareViaWhatsApp(invoice: Invoice, shopSettings: ShopSetti
     }
   }
 
-  const waUrl = phone
+  const url = phone
     ? `https://wa.me/${phone}?text=${encodedMessage}`
     : `https://wa.me/?text=${encodedMessage}`;
 
-  window.open(waUrl, '_blank');
+  window.open(url, '_blank');
 }
