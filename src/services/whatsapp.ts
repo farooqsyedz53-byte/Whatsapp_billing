@@ -4,7 +4,7 @@
  */
 
 import type { Invoice, ShopSettings } from '@/types';
-import { getInvoicePDFBlob } from './pdf';
+import { generateInvoiceHTML } from './html';
 
 /**
  * Generate a WhatsApp-ready invoice summary message.
@@ -52,18 +52,23 @@ ${shopSettings.address ? `📍 ${shopSettings.address}` : ''}
  * Opens WhatsApp with the customer's number (if available) and pre-filled message.
  */
 export async function shareViaWhatsApp(invoice: Invoice, shopSettings: ShopSettings): Promise<void> {
+  // 1. Generate and download the standalone HTML file automatically
+  const htmlContent = generateInvoiceHTML(invoice, shopSettings);
+  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Invoice_${invoice.invoiceNumber}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  // 2. Open WhatsApp with pre-filled text and phone number
   const message = formatInvoiceMessage(invoice, shopSettings);
+  const finalMessage = `${message}\n\n*(Please attach the downloaded HTML invoice file manually)*`;
 
-  // Create a digital bill link by encoding the invoice data (without the large logo image)
-  const { logo, ...shopDetails } = shopSettings;
-  const payload = { i: invoice, s: shopDetails };
-  const encodedData = btoa(encodeURIComponent(JSON.stringify(payload)));
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const billUrl = `${baseUrl}/bill?d=${encodedData}`;
-
-  const finalMessage = `${message}\n\n🌐 *View & Download Digital Bill:*\n${billUrl}`;
-
-  // Use wa.me link to ensure the phone number is targeted
   const encodedMessage = encodeURIComponent(finalMessage);
   let phone = '';
   if (invoice.customer.phone) {
@@ -73,9 +78,9 @@ export async function shareViaWhatsApp(invoice: Invoice, shopSettings: ShopSetti
     }
   }
 
-  const url = phone
+  const waUrl = phone
     ? `https://wa.me/${phone}?text=${encodedMessage}`
     : `https://wa.me/?text=${encodedMessage}`;
 
-  window.open(url, '_blank');
+  window.open(waUrl, '_blank');
 }
