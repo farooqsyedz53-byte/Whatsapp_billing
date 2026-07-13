@@ -1,0 +1,17 @@
+# Netlify configuration for StyleBill
+# Next.js on Netlify uses the @netlify/plugin-nextjs adapter
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+  functions = "netlify/functions"
+
+# Next.js plugin handles routing and SSR automatically
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Redirect API calls to Netlify Functions
+[[redirects]]
+  from = "/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
