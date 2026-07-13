@@ -18,7 +18,7 @@ function formatInvoiceMessage(invoice: Invoice, shopSettings: ShopSettings): str
     .join('\n');
 
   const message = `
-🧾 *INVOICE - ${shopSettings.name || 'Fashion Store'}*
+*INVOICE - ${shopSettings.name || 'Fashion Store'}*
 --------------------
 Invoice #: ${invoice.invoiceNumber}
 Date: ${new Date(invoice.date).toLocaleDateString('en-IN', {
@@ -27,21 +27,21 @@ Date: ${new Date(invoice.date).toLocaleDateString('en-IN', {
     day: 'numeric',
   })}
 
-👤 *Customer:* ${invoice.customer.name || 'Walk-in'}
-📱 Phone: ${invoice.customer.phone || 'N/A'}
+*Customer:* ${invoice.customer.name || 'Walk-in'}
+Phone: ${invoice.customer.phone || 'N/A'}
 
-📦 *Items:*
+*Items:*
 ${items}
 
 --------------------
 Subtotal: Rs.${invoice.subtotal.toFixed(2)}
 ${invoice.totalDiscount > 0 ? `Discount: -Rs.${invoice.totalDiscount.toFixed(2)}\n` : ''}GST (${invoice.taxRate}%): Rs.${invoice.taxAmount.toFixed(2)}
-*💰 Grand Total: Rs.${invoice.grandTotal.toFixed(2)}*
+*Grand Total: Rs.${invoice.grandTotal.toFixed(2)}*
 --------------------
 
-Thank you for shopping with us! 🛍️
-${shopSettings.phone ? `📞 ${shopSettings.phone}` : ''}
-${shopSettings.address ? `📍 ${shopSettings.address}` : ''}
+Thank you for shopping with us!
+${shopSettings.phone ? `Tel: ${shopSettings.phone}` : ''}
+${shopSettings.address ? `Address: ${shopSettings.address}` : ''}
 `.trim();
 
   return message;
@@ -72,7 +72,7 @@ export async function shareViaWhatsApp(invoice: Invoice, shopSettings: ShopSetti
     console.warn('Failed to shorten URL with TinyURL, using long URL', error);
   }
 
-  const finalMessage = `${message}\n\n🌐 *View & Download Digital Bill:*\n${finalBillUrl}`;
+  const finalMessage = `${message}\n\n*View & Download Digital Bill:*\n${finalBillUrl}`;
 
   // Use wa.me link to ensure the phone number is targeted
   const encodedMessage = encodeURIComponent(finalMessage);
