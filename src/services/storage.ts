@@ -49,6 +49,11 @@ export function saveInvoice(invoice: Invoice): void {
   saveToStorage(KEYS.INVOICES, invoices);
 }
 
+/** Save an entire array of invoices (used for cloud sync) */
+export function saveAllInvoices(invoices: Invoice[]): void {
+  saveToStorage(KEYS.INVOICES, invoices);
+}
+
 /** Update an existing invoice by ID */
 export function updateInvoice(updatedInvoice: Invoice): void {
   const invoices = getFromStorage<Invoice[]>(KEYS.INVOICES, []);
