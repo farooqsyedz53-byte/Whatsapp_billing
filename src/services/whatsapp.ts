@@ -61,21 +61,21 @@ export async function shareViaWhatsApp(invoice: Invoice, shopSettings: ShopSetti
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const longBillUrl = `${baseUrl}/bill?d=${encodedData}`;
 
-  // Use TinyURL free API to shorten the long link
+  // Use is.gd free API to shorten the long link (avoids TinyURL preview screens)
   let finalBillUrl = longBillUrl;
   try {
-    const response = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longBillUrl)}`);
+    const response = await fetch(`https://is.gd/create.php?format=simple&url=${encodeURIComponent(longBillUrl)}`);
     if (response.ok) {
       finalBillUrl = await response.text();
     }
   } catch (error) {
-    console.warn('Failed to shorten URL with TinyURL, using long URL', error);
+    console.warn('Failed to shorten URL with is.gd, using long URL', error);
   }
 
   let finalMessage = message;
   
   if (shopSettings.upiId) {
-    finalMessage += `\n\n*Payment Options:*\nPay via UPI directly to: ${shopSettings.upiId}\n\n*Or Click below to View Bill & Pay via PhonePe/GPay:*\n${finalBillUrl}`;
+    finalMessage += `\n\n*Click below to View Bill & Pay via PhonePe/GPay:*\n${finalBillUrl}`;
   } else {
     finalMessage += `\n\n*View & Download Digital Bill:*\n${finalBillUrl}`;
   }
