@@ -1,16 +1,144 @@
 /**
  * Digital Bill view page.
  * Parses the base64 encoded invoice data from the URL and displays it.
+ * Shows UPI payment buttons if the shop has a UPI ID configured.
  */
 
 'use client';
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Printer, Download } from 'lucide-react';
+import { Printer, CreditCard, CheckCircle2 } from 'lucide-react';
 import InvoicePreview from '@/components/invoice/InvoicePreview';
 import type { Invoice, ShopSettings } from '@/types';
 import Button from '@/components/ui/Button';
+
+/** Build a standard UPI intent URL */
+function buildUpiUrl(upiId: string, name: string, amount: number, invoiceNumber: string): string {
+  const params = new URLSearchParams({
+    pa: upiId,
+    pn: name,
+    am: amount.toFixed(2),
+    cu: 'INR',
+    tn: `Payment for ${invoiceNumber}`,
+  });
+  return `upi://pay?${params.toString()}`;
+}
+
+/** Payment app configurations with their deep-link schemes */
+const PAYMENT_APPS = [
+  {
+    name: 'Google Pay',
+    scheme: 'tez://upi/pay',
+    color: 'from-blue-500 to-blue-600',
+    hoverColor: 'hover:shadow-blue-500/30',
+    logo: '🅖',
+  },
+  {
+    name: 'PhonePe',
+    scheme: 'phonepe://pay',
+    color: 'from-purple-600 to-indigo-600',
+    hoverColor: 'hover:shadow-purple-500/30',
+    logo: '🅟',
+  },
+  {
+    name: 'Amazon Pay',
+    scheme: 'amazonpay://upi/pay',
+    color: 'from-amber-500 to-orange-500',
+    hoverColor: 'hover:shadow-amber-500/30',
+    logo: '🅐',
+  },
+  {
+    name: 'Any UPI App',
+    scheme: 'upi://pay',
+    color: 'from-emerald-500 to-teal-600',
+    hoverColor: 'hover:shadow-emerald-500/30',
+    logo: '💳',
+  },
+];
+
+function PaymentSection({ invoice, shopSettings }: { invoice: Invoice; shopSettings: ShopSettings }) {
+  const [paymentDone, setPaymentDone] = useState(false);
+
+  if (!shopSettings.upiId) return null;
+  if (invoice.grandTotal <= 0) return null;
+
+  const genericUpiUrl = buildUpiUrl(shopSettings.upiId, shopSettings.name || 'Shop', invoice.grandTotal, invoice.invoiceNumber);
+
+  const handlePay = (scheme: string) => {
+    // Build app-specific URL by replacing the scheme
+    const upiParams = genericUpiUrl.replace('upi://pay', '');
+    const appUrl = `${scheme}${upiParams}`;
+
+    // Try opening the app-specific link, fall back to generic UPI
+    try {
+      window.location.href = appUrl;
+    } catch {
+      window.location.href = genericUpiUrl;
+    }
+  };
+
+  if (paymentDone) {
+    return (
+      <div className="mt-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-6 text-center">
+        <CheckCircle2 size={48} className="text-emerald-400 mx-auto mb-3" />
+        <h3 className="text-lg font-bold text-white mb-1">Payment Initiated!</h3>
+        <p className="text-sm text-gray-400">
+          Please complete the payment in your UPI app. The shop owner will confirm receipt.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="mt-6 rounded-2xl bg-white/[0.03] border border-white/[0.06] overflow-hidden animate-slide-in-up"
+      style={{ animationDelay: '0.2s', animationFillMode: 'both' }}
+    >
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <CreditCard size={18} className="text-indigo-400" />
+          <h3 className="text-sm font-semibold text-white">Pay Now</h3>
+        </div>
+        <div className="bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full text-sm font-bold tabular-nums">
+          Rs. {invoice.grandTotal.toFixed(2)}
+        </div>
+      </div>
+
+      {/* Payment Buttons */}
+      <div className="p-4 grid grid-cols-2 gap-3">
+        {PAYMENT_APPS.map((app) => (
+          <button
+            key={app.name}
+            onClick={() => {
+              handlePay(app.scheme);
+              // Mark as initiated after a short delay
+              setTimeout(() => setPaymentDone(true), 1500);
+            }}
+            className={`
+              relative flex items-center gap-3 px-4 py-3.5 rounded-xl
+              bg-gradient-to-r ${app.color} 
+              text-white font-semibold text-sm
+              shadow-lg ${app.hoverColor}
+              hover:scale-[1.02] active:scale-[0.98]
+              transition-all duration-200
+            `}
+          >
+            <span className="text-lg">{app.logo}</span>
+            <span>{app.name}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="px-5 pb-4">
+        <p className="text-[11px] text-gray-500 text-center">
+          Tap a button to open your payment app. The amount and shop details will be pre-filled.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function BillContent() {
   const searchParams = useSearchParams();
@@ -73,15 +201,15 @@ function BillContent() {
         </div>
       </div>
       
-      {/* 
-        The InvoicePreview wrapper will handle its own white background.
-        We force a light background context for it by wrapping it in a div that ignores dark mode.
-      */}
+      {/* Invoice Preview */}
       <div className="bg-gray-100 rounded-xl p-2 sm:p-4 overflow-x-auto">
         <div className="min-w-[400px]">
           <InvoicePreview invoice={data.invoice} shopSettings={data.shopSettings} standalone />
         </div>
       </div>
+
+      {/* UPI Payment Section */}
+      <PaymentSection invoice={data.invoice} shopSettings={data.shopSettings} />
     </div>
   );
 }

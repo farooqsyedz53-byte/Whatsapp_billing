@@ -101,9 +101,9 @@ export default function InvoiceSummary({
             <span className="text-white tabular-nums">₹{taxAmount.toFixed(2)}</span>
           </div>
 
-          <div className="border-t border-white/[0.08] pt-3 flex justify-between">
+          <div className="border-t border-white/[0.08] pt-3 flex justify-between items-center">
             <span className="text-base font-semibold text-white">Grand Total</span>
-            <span className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 tabular-nums">
+            <span className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 tabular-nums animate-pulse-slow">
               ₹{grandTotal.toFixed(2)}
             </span>
           </div>

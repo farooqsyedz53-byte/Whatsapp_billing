@@ -11,6 +11,7 @@ export interface ShopSettings {
   gstNumber: string;
   phone: string;
   email: string;
+  upiId: string; // UPI ID for payment links (e.g., yourname@ybl)
 }
 
 /** Customer information attached to an invoice */
@@ -94,4 +95,5 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   gstNumber: '',
   phone: '',
   email: '',
+  upiId: '',
 };

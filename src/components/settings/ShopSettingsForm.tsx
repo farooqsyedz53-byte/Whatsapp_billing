@@ -141,6 +141,28 @@ export default function ShopSettingsForm({
           onChange={(e) => setForm({ ...form, email: e.target.value })}
         />
 
+        {/* Payment Settings Divider */}
+        <div className="pt-3 pb-1">
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-white/[0.06]" />
+            <span className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Payment Settings</span>
+            <div className="h-px flex-1 bg-white/[0.06]" />
+          </div>
+        </div>
+
+        {/* UPI ID */}
+        <div>
+          <Input
+            label="UPI ID"
+            placeholder="yourname@ybl or yourname@oksbi"
+            value={form.upiId}
+            onChange={(e) => setForm({ ...form, upiId: e.target.value })}
+          />
+          <p className="text-[11px] text-gray-500 mt-1.5">
+            Your UPI ID for receiving payments. Customers will see Pay buttons (PhonePe, GPay, Amazon Pay) on their digital bill.
+          </p>
+        </div>
+
         {/* Save Button */}
         <div className="pt-2">
           <Button

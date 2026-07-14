@@ -123,3 +123,22 @@ body {
   background: rgba(99, 102, 241, 0.3);
   color: white;
 }
+
+/* ─── Gradient Text & Extra Utilities ───────────────────────────────── */
+
+.text-gradient {
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-image: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+}
+
+@keyframes pulseSlow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.animate-pulse-slow {
+  animation: pulseSlow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+

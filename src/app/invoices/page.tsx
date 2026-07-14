@@ -4,13 +4,14 @@
 
 'use client';
 
-import React from 'react';
+import React, { useContext } from 'react';
 import Link from 'next/link';
 import { FileText, Plus } from 'lucide-react';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useShopSettings } from '@/hooks/useShopSettings';
 import InvoiceList from '@/components/invoices/InvoiceList';
 import Button from '@/components/ui/Button';
+import { ToastContext } from '@/components/layout/AppShell';
 
 export default function InvoicesPage() {
   const {
@@ -19,10 +20,17 @@ export default function InvoicesPage() {
     setSearchQuery,
     duplicateInvoice,
     removeInvoice,
+    markAsPaid,
     isLoading,
   } = useInvoices();
 
   const { settings } = useShopSettings();
+  const { showToast } = useContext(ToastContext);
+
+  const handleMarkPaid = (id: string) => {
+    markAsPaid(id);
+    showToast('Invoice marked as paid!', 'success');
+  };
 
   if (isLoading) {
     return (
@@ -61,6 +69,7 @@ export default function InvoicesPage() {
         onSearchChange={setSearchQuery}
         onDuplicate={duplicateInvoice}
         onDelete={removeInvoice}
+        onMarkPaid={handleMarkPaid}
       />
     </div>
   );

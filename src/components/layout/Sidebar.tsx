@@ -104,7 +104,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 />
                 {item.label}
                 {isActive && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse-slow" />
                 )}
               </Link>
             );

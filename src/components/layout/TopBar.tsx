@@ -42,9 +42,9 @@ export default function TopBar({ onMenuToggle }: TopBarProps) {
             </div>
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="Avatar" className="w-9 h-9 rounded-full border-2 border-indigo-500/30 object-cover" />
+              <img src={avatarUrl} alt="Avatar" className="w-9 h-9 rounded-full border-2 border-indigo-500/30 object-cover hover:border-indigo-400 hover:scale-105 transition-all duration-300" />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-indigo-500/20">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:scale-105 transition-all duration-300 cursor-pointer">
                 {initial}
               </div>
             )}

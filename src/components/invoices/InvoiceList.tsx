@@ -16,6 +16,7 @@ import {
   MessageCircle,
   MoreVertical,
   FileText,
+  CheckCircle2,
 } from 'lucide-react';
 import type { Invoice, ShopSettings } from '@/types';
 import Badge from '@/components/ui/Badge';
@@ -32,6 +33,7 @@ interface InvoiceListProps {
   onSearchChange: (query: string) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
+  onMarkPaid: (id: string) => void;
 }
 
 export default function InvoiceList({
@@ -41,6 +43,7 @@ export default function InvoiceList({
   onSearchChange,
   onDuplicate,
   onDelete,
+  onMarkPaid,
 }: InvoiceListProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -102,13 +105,14 @@ export default function InvoiceList({
       )}
 
       {/* Invoice cards */}
-      <div className="space-y-2">
-        {invoices.map((invoice) => (
+      <div className="space-y-3">
+        {invoices.map((invoice, idx) => (
           <div
             key={invoice.id}
-            className="group rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] hover:border-white/10 transition-all p-4"
+            className="group rounded-2xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] hover:border-indigo-500/30 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 p-4 animate-slide-in-up"
+            style={{ animationDelay: `${idx * 0.05}s`, animationFillMode: 'both' }}
           >
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               {/* Left: Invoice info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-1">
@@ -142,6 +146,15 @@ export default function InvoiceList({
 
                 {/* Action buttons (desktop) */}
                 <div className="hidden md:flex items-center gap-1">
+                  {invoice.status !== 'paid' && (
+                    <button
+                      onClick={() => onMarkPaid(invoice.id)}
+                      className="p-2 rounded-lg text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                      title="Mark as Paid"
+                    >
+                      <CheckCircle2 size={15} />
+                    </button>
+                  )}
                   <Link
                     href={`/invoice/${invoice.id}/edit`}
                     className="p-2 rounded-lg text-gray-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
@@ -199,6 +212,14 @@ export default function InvoiceList({
                         onClick={() => setOpenDropdown(null)}
                       />
                       <div className="absolute right-0 top-full mt-1 w-48 bg-gray-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 animate-scale-in">
+                        {invoice.status !== 'paid' && (
+                          <button
+                            onClick={() => { onMarkPaid(invoice.id); setOpenDropdown(null); }}
+                            className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/5 transition-colors"
+                          >
+                            <CheckCircle2 size={14} /> Mark as Paid
+                          </button>
+                        )}
                         <Link
                           href={`/invoice/${invoice.id}/edit`}
                           className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
