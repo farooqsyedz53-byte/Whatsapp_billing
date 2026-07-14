@@ -72,7 +72,13 @@ export async function shareViaWhatsApp(invoice: Invoice, shopSettings: ShopSetti
     console.warn('Failed to shorten URL with TinyURL, using long URL', error);
   }
 
-  const finalMessage = `${message}\n\n*View & Download Digital Bill:*\n${finalBillUrl}`;
+  let finalMessage = message;
+  
+  if (shopSettings.upiId) {
+    finalMessage += `\n\n*Payment Options:*\nPay via UPI directly to: ${shopSettings.upiId}\n\n*Or Click below to View Bill & Pay via PhonePe/GPay:*\n${finalBillUrl}`;
+  } else {
+    finalMessage += `\n\n*View & Download Digital Bill:*\n${finalBillUrl}`;
+  }
 
   // Use wa.me link to ensure the phone number is targeted
   const encodedMessage = encodeURIComponent(finalMessage);
