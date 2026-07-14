@@ -182,3 +182,78 @@ export async function getTurnoverStats(startDate: string, endDate: string) {
     topCustomers,
   };
 }
+
+/** 
+ * SHOP SETTINGS SYNC
+ */
+
+import type { ShopSettings } from '@/types';
+
+/** Convert ShopSettings to Supabase row */
+function settingsToRow(settings: ShopSettings) {
+  return {
+    id: 'default', // Single row for global settings
+    name: settings.name,
+    logo: settings.logo,
+    address: settings.address,
+    gst_number: settings.gstNumber,
+    phone: settings.phone,
+    email: settings.email,
+    upi_id: settings.upiId,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+/** Convert Supabase row to ShopSettings */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToSettings(row: any): ShopSettings {
+  return {
+    name: row.name || '',
+    logo: row.logo || '',
+    address: row.address || '',
+    gstNumber: row.gst_number || '',
+    phone: row.phone || '',
+    email: row.email || '',
+    upiId: row.upi_id || '',
+  };
+}
+
+/** Fetch shop settings from Supabase */
+export async function getShopSettingsFromCloud(): Promise<ShopSettings | null> {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = getSupabase();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('shop_settings')
+    .select('*')
+    .eq('id', 'default')
+    .single();
+
+  if (error || !data) {
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "No rows found"
+      console.error('Failed to fetch shop settings from Supabase:', error);
+    }
+    return null;
+  }
+
+  return rowToSettings(data);
+}
+
+/** Save shop settings to Supabase */
+export async function saveShopSettingsToCloud(settings: ShopSettings): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = getSupabase();
+  if (!supabase) return false;
+
+  const { error } = await supabase
+    .from('shop_settings')
+    .upsert(settingsToRow(settings), { onConflict: 'id' });
+
+  if (error) {
+    console.error('Failed to save shop settings to Supabase:', error);
+    return false;
+  }
+  return true;
+}
+
