@@ -230,6 +230,77 @@ export default async function handler() {
   </html>
   `;
 
+  // Fetch shop settings for the PDF header
+  const { data: shopData } = await supabase.from('shop_settings').select('*').single();
+  const shopSettings = shopData?.settings || {};
+
+  // Generate PDFs for attachments
+  console.log('Generating PDFs for attachments...');
+  const { jsPDF } = await import('jspdf');
+  // @ts-ignore
+  const autoTable = (await import('jspdf-autotable')).default;
+  const attachments = [];
+
+  for (const invoice of invoices) {
+    try {
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 15;
+      let y = margin;
+
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text(shopSettings.name || 'Fashion Store', margin, y + 8);
+      y += 20;
+
+      doc.setFontSize(16);
+      doc.setTextColor(99, 102, 241);
+      doc.text('TAX INVOICE', pageWidth - margin, y, { align: 'right' });
+      
+      doc.setFontSize(10);
+      doc.setTextColor(60, 60, 60);
+      doc.text(`Invoice #: ${invoice.invoice_number}`, margin, y);
+      y += 6;
+      doc.text(`Date: ${new Date(invoice.date).toLocaleDateString('en-IN')}`, margin, y);
+      y += 10;
+
+      doc.text('Bill To:', margin, y);
+      doc.text(invoice.customer_name || 'Walk-in Customer', margin + 15, y);
+      y += 10;
+
+      const items = invoice.items || [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tableData = items.map((item: any, idx: number) => [
+        idx + 1,
+        item.name,
+        item.quantity,
+        Number(item.price).toFixed(2),
+        Number(item.amount).toFixed(2),
+      ]);
+
+      autoTable(doc, {
+        startY: y,
+        head: [['#', 'Item', 'Qty', 'Price', 'Amount']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [99, 102, 241] }
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      y = (doc as any).lastAutoTable.finalY + 10;
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Grand Total: Rs. ${parseFloat(invoice.grand_total).toFixed(2)}`, pageWidth - margin, y, { align: 'right' });
+
+      const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+      attachments.push({
+        filename: `Invoice_${invoice.invoice_number}.pdf`,
+        content: pdfBuffer,
+      });
+    } catch (e) {
+      console.error(`Failed to generate PDF for ${invoice.invoice_number}:`, e);
+    }
+  }
+
   // Send the email via Resend
   const emailList = adminEmail.split(',').map((e) => e.trim()).filter(Boolean);
   try {
@@ -238,8 +309,9 @@ export default async function handler() {
       to: emailList,
       subject: `Monthly Sales Report - ${monthName}`,
       html: emailHtml,
+      attachments: attachments,
     });
-    console.log(`Monthly report sent to ${emailList.join(', ')}`);
+    console.log(`Monthly report sent to ${emailList.join(', ')} with ${attachments.length} attachments`);
   } catch (emailError) {
     console.error('Failed to send email:', emailError);
     return new Response('Email send failed', { status: 500 });
