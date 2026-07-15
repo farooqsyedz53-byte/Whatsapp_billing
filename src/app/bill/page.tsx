@@ -12,6 +12,7 @@ import { Printer, CreditCard, CheckCircle2 } from 'lucide-react';
 import InvoicePreview from '@/components/invoice/InvoicePreview';
 import type { Invoice, ShopSettings } from '@/types';
 import Button from '@/components/ui/Button';
+import { decompressFromUrlSafe } from '@/services/whatsapp';
 
 /** Build a standard UPI intent URL */
 function buildUpiUrl(upiId: string, name: string, amount: number, invoiceNumber: string): string {
@@ -25,37 +26,50 @@ function buildUpiUrl(upiId: string, name: string, amount: number, invoiceNumber:
   return `upi://pay?${params.toString()}`;
 }
 
-/** Payment app configurations with their deep-link schemes */
+/** Payment app configurations with Android intent URIs for reliable deep-linking */
 const PAYMENT_APPS = [
   {
     name: 'Google Pay',
-    scheme: 'tez://upi/pay',
+    /** Android package name for Google Pay (Tez) */
+    androidPackage: 'com.google.android.apps.nbu.paisa.user',
     color: 'from-blue-500 to-blue-600',
     hoverColor: 'hover:shadow-blue-500/30',
     logo: '🅖',
   },
   {
     name: 'PhonePe',
-    scheme: 'phonepe://pay',
+    androidPackage: 'com.phonepe.app',
     color: 'from-purple-600 to-indigo-600',
     hoverColor: 'hover:shadow-purple-500/30',
     logo: '🅟',
   },
   {
     name: 'Amazon Pay',
-    scheme: 'amazonpay://upi/pay',
+    androidPackage: 'in.amazon.mShop.android.shopping',
     color: 'from-amber-500 to-orange-500',
     hoverColor: 'hover:shadow-amber-500/30',
     logo: '🅐',
   },
   {
     name: 'Any UPI App',
-    scheme: 'upi://pay',
+    /** No specific package — uses generic upi://pay to show system chooser */
+    androidPackage: null,
     color: 'from-emerald-500 to-teal-600',
     hoverColor: 'hover:shadow-emerald-500/30',
     logo: '💳',
   },
 ];
+
+/**
+ * Build an Android intent:// URI that targets a specific app by package name.
+ * Falls back to Play Store if the app is not installed.
+ * @see https://developer.chrome.com/docs/android/intents
+ */
+function buildIntentUrl(upiUrl: string, androidPackage: string): string {
+  // Extract the query part from the upi://pay?... URL
+  const queryPart = upiUrl.replace('upi://pay?', '');
+  return `intent://pay?${queryPart}#Intent;scheme=upi;package=${androidPackage};end`;
+}
 
 function PaymentSection({ invoice, shopSettings }: { invoice: Invoice; shopSettings: ShopSettings }) {
   const [paymentDone, setPaymentDone] = useState(false);
@@ -65,15 +79,13 @@ function PaymentSection({ invoice, shopSettings }: { invoice: Invoice; shopSetti
 
   const genericUpiUrl = buildUpiUrl(shopSettings.upiId, shopSettings.name || 'Shop', invoice.grandTotal, invoice.invoiceNumber);
 
-  const handlePay = (scheme: string) => {
-    // Build app-specific URL by replacing the scheme
-    const upiParams = genericUpiUrl.replace('upi://pay', '');
-    const appUrl = `${scheme}${upiParams}`;
-
-    // Try opening the app-specific link, fall back to generic UPI
-    try {
-      window.location.href = appUrl;
-    } catch {
+  const handlePay = (androidPackage: string | null) => {
+    if (androidPackage) {
+      // Use Android intent URI to target the specific app by package name
+      const intentUrl = buildIntentUrl(genericUpiUrl, androidPackage);
+      window.location.href = intentUrl;
+    } else {
+      // Generic UPI intent — shows system app chooser on Android
       window.location.href = genericUpiUrl;
     }
   };
@@ -112,7 +124,7 @@ function PaymentSection({ invoice, shopSettings }: { invoice: Invoice; shopSetti
           <button
             key={app.name}
             onClick={() => {
-              handlePay(app.scheme);
+              handlePay(app.androidPackage);
               // Mark as initiated after a short delay
               setTimeout(() => setPaymentDone(true), 1500);
             }}
@@ -146,20 +158,26 @@ function BillContent() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    const d = searchParams.get('d');
-    if (d) {
-      try {
-        const decoded = JSON.parse(decodeURIComponent(atob(d)));
-        if (decoded.i && decoded.s) {
-          setData({ invoice: decoded.i, shopSettings: decoded.s });
-        } else {
-          setError(true);
-        }
-      } catch (e) {
-        console.error('Failed to parse bill data:', e);
+    const c = searchParams.get('c'); // New compressed format
+    const d = searchParams.get('d'); // Legacy uncompressed format
+
+    try {
+      let decoded;
+      if (c) {
+        // New format: LZW-compressed + URL-safe base64
+        decoded = JSON.parse(decodeURIComponent(decompressFromUrlSafe(c)));
+      } else if (d) {
+        // Legacy format: plain base64
+        decoded = JSON.parse(decodeURIComponent(atob(d)));
+      }
+
+      if (decoded?.i && decoded?.s) {
+        setData({ invoice: decoded.i, shopSettings: decoded.s });
+      } else {
         setError(true);
       }
-    } else {
+    } catch (e) {
+      console.error('Failed to parse bill data:', e);
       setError(true);
     }
   }, [searchParams]);

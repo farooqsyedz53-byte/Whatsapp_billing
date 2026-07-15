@@ -192,8 +192,8 @@ export default function InvoiceList({
                   </button>
                 </div>
 
-                {/* Mobile dropdown */}
-                <div className="md:hidden relative">
+                {/* Mobile dropdown trigger */}
+                <div className="md:hidden">
                   <button
                     onClick={() =>
                       setOpenDropdown(
@@ -204,63 +204,100 @@ export default function InvoiceList({
                   >
                     <MoreVertical size={16} />
                   </button>
-
-                  {openDropdown === invoice.id && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setOpenDropdown(null)}
-                      />
-                      <div className="absolute right-0 top-full mt-1 w-48 bg-gray-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 animate-scale-in">
-                        {invoice.status !== 'paid' && (
-                          <button
-                            onClick={() => { onMarkPaid(invoice.id); setOpenDropdown(null); }}
-                            className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/5 transition-colors"
-                          >
-                            <CheckCircle2 size={14} /> Mark as Paid
-                          </button>
-                        )}
-                        <Link
-                          href={`/invoice/${invoice.id}/edit`}
-                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
-                          onClick={() => setOpenDropdown(null)}
-                        >
-                          <Edit3 size={14} /> Edit
-                        </Link>
-                        <button
-                          onClick={() => { onDuplicate(invoice.id); setOpenDropdown(null); }}
-                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
-                        >
-                          <Copy size={14} /> Duplicate
-                        </button>
-                        <button
-                          onClick={() => { generateInvoicePDF(invoice, shopSettings); setOpenDropdown(null); }}
-                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
-                        >
-                          <Download size={14} /> Download PDF
-                        </button>
-                        <button
-                          onClick={() => { shareViaWhatsApp(invoice, shopSettings); setOpenDropdown(null); }}
-                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
-                        >
-                          <MessageCircle size={14} /> WhatsApp
-                        </button>
-                        <div className="border-t border-white/5 my-1" />
-                        <button
-                          onClick={() => { setDeleteId(invoice.id); setOpenDropdown(null); }}
-                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/5 transition-colors"
-                        >
-                          <Trash2 size={14} /> Delete
-                        </button>
-                      </div>
-                    </>
-                  )}
                 </div>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Mobile bottom-sheet action menu — rendered outside card stacking context */}
+      {openDropdown && (() => {
+        const activeInvoice = invoices.find(inv => inv.id === openDropdown);
+        if (!activeInvoice) return null;
+        return (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm md:hidden"
+              onClick={() => setOpenDropdown(null)}
+              style={{ animation: 'fadeIn 0.15s ease-out' }}
+            />
+            {/* Bottom sheet */}
+            <div
+              className="fixed bottom-0 left-0 right-0 z-[101] md:hidden bg-gray-900 border-t border-white/10 rounded-t-2xl shadow-2xl pb-[env(safe-area-inset-bottom)]"
+              style={{ animation: 'slideUp 0.2s ease-out' }}
+            >
+              {/* Handle bar */}
+              <div className="flex justify-center pt-3 pb-2">
+                <div className="w-10 h-1 rounded-full bg-white/20" />
+              </div>
+
+              {/* Invoice info header */}
+              <div className="px-5 pb-3 border-b border-white/5">
+                <p className="text-sm font-semibold text-white">{activeInvoice.invoiceNumber}</p>
+                <p className="text-xs text-gray-400">
+                  {activeInvoice.customer.name || 'Walk-in'} · ₹{activeInvoice.grandTotal.toFixed(2)}
+                </p>
+              </div>
+
+              {/* Action buttons */}
+              <div className="py-2">
+                {activeInvoice.status !== 'paid' && (
+                  <button
+                    onClick={() => { onMarkPaid(activeInvoice.id); setOpenDropdown(null); }}
+                    className="flex items-center gap-3 w-full px-5 py-3.5 text-sm text-emerald-400 active:bg-emerald-500/10 transition-colors"
+                  >
+                    <CheckCircle2 size={18} /> Mark as Paid
+                  </button>
+                )}
+                <Link
+                  href={`/invoice/${activeInvoice.id}/edit`}
+                  className="flex items-center gap-3 w-full px-5 py-3.5 text-sm text-gray-200 active:bg-white/5 transition-colors"
+                  onClick={() => setOpenDropdown(null)}
+                >
+                  <Edit3 size={18} /> Edit Invoice
+                </Link>
+                <button
+                  onClick={() => { onDuplicate(activeInvoice.id); setOpenDropdown(null); }}
+                  className="flex items-center gap-3 w-full px-5 py-3.5 text-sm text-gray-200 active:bg-white/5 transition-colors"
+                >
+                  <Copy size={18} /> Duplicate
+                </button>
+                <button
+                  onClick={() => { generateInvoicePDF(activeInvoice, shopSettings); setOpenDropdown(null); }}
+                  className="flex items-center gap-3 w-full px-5 py-3.5 text-sm text-gray-200 active:bg-white/5 transition-colors"
+                >
+                  <Download size={18} /> Download PDF
+                </button>
+                <button
+                  onClick={() => { shareViaWhatsApp(activeInvoice, shopSettings); setOpenDropdown(null); }}
+                  className="flex items-center gap-3 w-full px-5 py-3.5 text-sm text-gray-200 active:bg-white/5 transition-colors"
+                >
+                  <MessageCircle size={18} /> Share via WhatsApp
+                </button>
+                <div className="border-t border-white/5 my-1" />
+                <button
+                  onClick={() => { setDeleteId(activeInvoice.id); setOpenDropdown(null); }}
+                  className="flex items-center gap-3 w-full px-5 py-3.5 text-sm text-red-400 active:bg-red-500/10 transition-colors"
+                >
+                  <Trash2 size={18} /> Delete Invoice
+                </button>
+              </div>
+
+              {/* Cancel button */}
+              <div className="px-4 pb-4 pt-1">
+                <button
+                  onClick={() => setOpenDropdown(null)}
+                  className="w-full py-3 rounded-xl bg-white/5 text-sm font-medium text-gray-300 active:bg-white/10 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Delete confirmation modal */}
       <Modal

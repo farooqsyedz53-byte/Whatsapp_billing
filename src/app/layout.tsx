@@ -16,9 +16,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'StyleBill — Clothing Shop Billing System',
-  description:
-    'Professional clothing store billing and POS application. Create invoices, manage customers, generate PDF bills, and share via WhatsApp.',
+  title: 'SANA Dresses Billing App',
   keywords: ['billing', 'invoice', 'clothing', 'POS', 'fashion', 'GST'],
 };
 
