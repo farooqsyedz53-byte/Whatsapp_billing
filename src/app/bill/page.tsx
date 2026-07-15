@@ -158,16 +158,37 @@ function BillContent() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    const c = searchParams.get('c'); // New compressed format
+    const billId = searchParams.get('id'); // Database-backed short ID
+    const c = searchParams.get('c'); // Compressed format (fallback)
     const d = searchParams.get('d'); // Legacy uncompressed format
 
+    if (billId) {
+      // Fetch bill data from Supabase via API
+      fetch(`/api/bill/${billId}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Bill not found');
+          return res.json();
+        })
+        .then(result => {
+          if (result.invoice && result.shopSettings) {
+            setData({ invoice: result.invoice, shopSettings: result.shopSettings });
+          } else {
+            setError(true);
+          }
+        })
+        .catch(err => {
+          console.error('Failed to fetch bill:', err);
+          setError(true);
+        });
+      return;
+    }
+
+    // Inline data formats (compressed or legacy)
     try {
       let decoded;
       if (c) {
-        // New format: LZW-compressed + URL-safe base64
         decoded = JSON.parse(decodeURIComponent(decompressFromUrlSafe(c)));
       } else if (d) {
-        // Legacy format: plain base64
         decoded = JSON.parse(decodeURIComponent(atob(d)));
       }
 

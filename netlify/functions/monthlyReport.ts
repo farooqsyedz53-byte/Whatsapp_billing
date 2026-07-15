@@ -258,5 +258,18 @@ export default async function handler() {
     console.log(`Cleaned up ${invoices.length} invoices from ${monthName}`);
   }
 
+  // Clean up old shared bills (digital bill links older than 90 days)
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const { error: sharedBillsError } = await supabase
+    .from('shared_bills')
+    .delete()
+    .lt('created_at', ninetyDaysAgo);
+
+  if (sharedBillsError) {
+    console.error('Failed to clean up old shared bills:', sharedBillsError);
+  } else {
+    console.log('Cleaned up shared bills older than 90 days');
+  }
+
   return new Response(`Report sent for ${monthName}. ${invoices.length} invoices archived and cleaned.`, { status: 200 });
 }

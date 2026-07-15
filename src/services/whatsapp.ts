@@ -137,36 +137,38 @@ export function decompressFromUrlSafe(compressed: string): string {
 
 /**
  * Share invoice via WhatsApp.
- * Opens WhatsApp with the customer's number (if available) and pre-filled message.
+ * Stores bill data in Supabase for a short URL, with fallback to compressed URL encoding.
  */
 export async function shareViaWhatsApp(invoice: Invoice, shopSettings: ShopSettings): Promise<void> {
   const message = formatInvoiceMessage(invoice, shopSettings);
-
-  // Create a digital bill link by encoding the invoice data (without the large logo image)
-  const { logo, ...shopDetails } = shopSettings;
-  const payload = JSON.stringify({ i: invoice, s: shopDetails });
-
-  // Compress the payload to dramatically reduce URL length
-  const compressed = compressToUrlSafe(encodeURIComponent(payload));
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const longBillUrl = `${baseUrl}/bill?c=${compressed}`;
 
-  // Use server-side API route to shorten URL (avoids CORS issues)
-  let finalBillUrl = longBillUrl;
+  // Strip the large logo from shop settings (not needed in shared bill)
+  const { logo, ...shopDetails } = shopSettings;
+
+  // Primary approach: Store bill data in Supabase via API and get a short ID
+  let finalBillUrl = '';
   try {
-    const response = await fetch('/api/shorten', {
+    const response = await fetch('/api/bill', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: longBillUrl }),
+      body: JSON.stringify({ invoice, shopSettings: shopDetails }),
     });
     if (response.ok) {
       const data = await response.json();
-      if (data.shortUrl && data.shortUrl.startsWith('http')) {
-        finalBillUrl = data.shortUrl;
+      if (data.id) {
+        finalBillUrl = `${baseUrl}/bill?id=${data.id}`;
       }
     }
   } catch (error) {
-    console.warn('Failed to shorten URL, using compressed URL', error);
+    console.warn('Failed to store bill in database:', error);
+  }
+
+  // Fallback: Use compressed URL encoding if database storage failed
+  if (!finalBillUrl) {
+    const payload = JSON.stringify({ i: invoice, s: shopDetails });
+    const compressed = compressToUrlSafe(encodeURIComponent(payload));
+    finalBillUrl = `${baseUrl}/bill?c=${compressed}`;
   }
 
   let finalMessage = message;
