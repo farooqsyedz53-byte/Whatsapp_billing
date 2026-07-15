@@ -60,12 +60,12 @@ export default function RecentInvoices({ invoices }: RecentInvoicesProps) {
         <table className="w-full">
           <thead>
             <tr className="text-xs text-gray-500 uppercase tracking-wider border-b border-white/[0.04]">
-              <th className="text-left px-5 py-3 font-medium">Invoice</th>
-              <th className="text-left px-5 py-3 font-medium">Customer</th>
-              <th className="text-left px-5 py-3 font-medium hidden sm:table-cell">Date</th>
-              <th className="text-right px-5 py-3 font-medium">Amount</th>
-              <th className="text-center px-5 py-3 font-medium">Status</th>
-              <th className="text-center px-5 py-3 font-medium">Action</th>
+              <th className="text-left px-3 sm:px-5 py-3 font-medium">Invoice</th>
+              <th className="text-left px-3 sm:px-5 py-3 font-medium">Customer</th>
+              <th className="text-left px-3 sm:px-5 py-3 font-medium hidden md:table-cell">Date</th>
+              <th className="text-right px-3 sm:px-5 py-3 font-medium">Amount</th>
+              <th className="text-center px-3 sm:px-5 py-3 font-medium hidden sm:table-cell">Status</th>
+              <th className="text-center px-3 sm:px-5 py-3 font-medium">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -74,12 +74,12 @@ export default function RecentInvoices({ invoices }: RecentInvoicesProps) {
                 key={invoice.id}
                 className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors"
               >
-                <td className="px-5 py-3.5">
+                <td className="px-3 sm:px-5 py-3.5">
                   <span className="text-sm font-medium text-indigo-400">
                     {invoice.invoiceNumber}
                   </span>
                 </td>
-                <td className="px-5 py-3.5">
+                <td className="px-3 sm:px-5 py-3.5">
                   <div>
                     <p className="text-sm text-white">
                       {invoice.customer.name || 'Walk-in'}
@@ -89,7 +89,7 @@ export default function RecentInvoices({ invoices }: RecentInvoicesProps) {
                     )}
                   </div>
                 </td>
-                <td className="px-5 py-3.5 hidden sm:table-cell">
+                <td className="px-3 sm:px-5 py-3.5 hidden md:table-cell">
                   <span className="text-sm text-gray-400">
                     {new Date(invoice.date).toLocaleDateString('en-IN', {
                       day: '2-digit',
@@ -97,15 +97,15 @@ export default function RecentInvoices({ invoices }: RecentInvoicesProps) {
                     })}
                   </span>
                 </td>
-                <td className="px-5 py-3.5 text-right">
+                <td className="px-3 sm:px-5 py-3.5 text-right">
                   <span className="text-sm font-semibold text-white tabular-nums">
                     ₹{invoice.grandTotal.toFixed(2)}
                   </span>
                 </td>
-                <td className="px-5 py-3.5 text-center">
+                <td className="px-3 sm:px-5 py-3.5 text-center hidden sm:table-cell">
                   <Badge status={invoice.status} />
                 </td>
-                <td className="px-5 py-3.5 text-center">
+                <td className="px-3 sm:px-5 py-3.5 text-center">
                   <Link
                     href={`/invoice/${invoice.id}/edit`}
                     className="inline-flex p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all"

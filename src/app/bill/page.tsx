@@ -26,12 +26,14 @@ function buildUpiUrl(upiId: string, name: string, amount: number, invoiceNumber:
   return `upi://pay?${params.toString()}`;
 }
 
-/** Payment app configurations with Android intent URIs for reliable deep-linking */
+/** Payment app configurations with platform-specific deep-link schemes */
 const PAYMENT_APPS = [
   {
     name: 'Google Pay',
-    /** Android package name for Google Pay (Tez) */
+    /** Android intent package */
     androidPackage: 'com.google.android.apps.nbu.paisa.user',
+    /** iOS URL scheme for Google Pay */
+    iosScheme: 'gpay://upi/pay',
     color: 'from-blue-500 to-blue-600',
     hoverColor: 'hover:shadow-blue-500/30',
     logo: '🅖',
@@ -39,6 +41,7 @@ const PAYMENT_APPS = [
   {
     name: 'PhonePe',
     androidPackage: 'com.phonepe.app',
+    iosScheme: 'phonepe://pay',
     color: 'from-purple-600 to-indigo-600',
     hoverColor: 'hover:shadow-purple-500/30',
     logo: '🅟',
@@ -46,29 +49,51 @@ const PAYMENT_APPS = [
   {
     name: 'Amazon Pay',
     androidPackage: 'in.amazon.mShop.android.shopping',
+    /** Amazon Pay has no reliable iOS UPI deep-link — falls back to generic upi:// */
+    iosScheme: null,
     color: 'from-amber-500 to-orange-500',
     hoverColor: 'hover:shadow-amber-500/30',
     logo: '🅐',
   },
   {
     name: 'Any UPI App',
-    /** No specific package — uses generic upi://pay to show system chooser */
     androidPackage: null,
+    iosScheme: null,
     color: 'from-emerald-500 to-teal-600',
     hoverColor: 'hover:shadow-emerald-500/30',
     logo: '💳',
   },
 ];
 
+/** Detect if the current device is iOS */
+function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+/** Detect if the current device is Android */
+function isAndroid(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /Android/i.test(navigator.userAgent);
+}
+
 /**
  * Build an Android intent:// URI that targets a specific app by package name.
- * Falls back to Play Store if the app is not installed.
  * @see https://developer.chrome.com/docs/android/intents
  */
 function buildIntentUrl(upiUrl: string, androidPackage: string): string {
-  // Extract the query part from the upi://pay?... URL
   const queryPart = upiUrl.replace('upi://pay?', '');
   return `intent://pay?${queryPart}#Intent;scheme=upi;package=${androidPackage};end`;
+}
+
+/**
+ * Build an iOS app-specific URL by replacing the upi:// scheme with the app's scheme.
+ * e.g., upi://pay?pa=... → gpay://upi/pay?pa=...
+ */
+function buildIOSAppUrl(upiUrl: string, iosScheme: string): string {
+  const queryPart = upiUrl.replace('upi://pay', '');
+  return `${iosScheme}${queryPart}`;
 }
 
 function PaymentSection({ invoice, shopSettings }: { invoice: Invoice; shopSettings: ShopSettings }) {
@@ -79,13 +104,21 @@ function PaymentSection({ invoice, shopSettings }: { invoice: Invoice; shopSetti
 
   const genericUpiUrl = buildUpiUrl(shopSettings.upiId, shopSettings.name || 'Shop', invoice.grandTotal, invoice.invoiceNumber);
 
-  const handlePay = (androidPackage: string | null) => {
-    if (androidPackage) {
-      // Use Android intent URI to target the specific app by package name
-      const intentUrl = buildIntentUrl(genericUpiUrl, androidPackage);
+  const handlePay = (app: typeof PAYMENT_APPS[0]) => {
+    if (isIOS()) {
+      // iOS: Use app-specific URL scheme, or fall back to generic upi://
+      if (app.iosScheme) {
+        const appUrl = buildIOSAppUrl(genericUpiUrl, app.iosScheme);
+        window.location.href = appUrl;
+      } else {
+        window.location.href = genericUpiUrl;
+      }
+    } else if (isAndroid() && app.androidPackage) {
+      // Android: Use intent URI with package name
+      const intentUrl = buildIntentUrl(genericUpiUrl, app.androidPackage);
       window.location.href = intentUrl;
     } else {
-      // Generic UPI intent — shows system app chooser on Android
+      // Desktop or fallback: Use generic UPI URL
       window.location.href = genericUpiUrl;
     }
   };
@@ -124,7 +157,7 @@ function PaymentSection({ invoice, shopSettings }: { invoice: Invoice; shopSetti
           <button
             key={app.name}
             onClick={() => {
-              handlePay(app.androidPackage);
+              handlePay(app);
               // Mark as initiated after a short delay
               setTimeout(() => setPaymentDone(true), 1500);
             }}
@@ -242,7 +275,7 @@ function BillContent() {
       
       {/* Invoice Preview */}
       <div className="bg-gray-100 rounded-xl p-2 sm:p-4 overflow-x-auto">
-        <div className="min-w-[400px]">
+        <div className="min-w-fit sm:min-w-[400px] mx-auto">
           <InvoicePreview invoice={data.invoice} shopSettings={data.shopSettings} standalone />
         </div>
       </div>
